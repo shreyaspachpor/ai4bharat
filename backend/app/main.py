@@ -2,10 +2,11 @@
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from app.config import get_settings
+from app.config import get_settings, get_cors_origins
 from app.routers import auth, interviews, feedback, aadhaar
 
 settings = get_settings()
+cors_origins = get_cors_origins()
 
 app = FastAPI(
     title="AI Mock Interview API",
@@ -16,11 +17,12 @@ app = FastAPI(
 # CORS – allow the Next.js frontend to call the API
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=settings.cors_origins,
+    allow_origins=cors_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
 
 # Register routers
 app.include_router(auth.router)
