@@ -1,6 +1,8 @@
 import Agent from "@/components/Agent";
 import { apiGetCurrentUser } from "@/lib/api";
 
+export const dynamic = "force-dynamic";
+
 const Page = async () => {
   const { user } = await apiGetCurrentUser();
 

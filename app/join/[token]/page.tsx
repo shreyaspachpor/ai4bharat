@@ -66,16 +66,28 @@ export default function ZeroUIInterviewPage() {
 
   // Once started, show the Agent UI
   if (hasStarted) {
+    // Extract and normalize candidate name
+    const candidateName = interview.candidateName || interview.candidate_name || interview.name || "Candidate";
+    
+    // Extract and normalize language - convert from "kn", "hi", "en" to "kn-IN", "hi-IN", "en-IN"
+    let interviewLanguage = interview.interviewLanguage || interview.language || "en";
+    if (interviewLanguage && !interviewLanguage.includes("-")) {
+      interviewLanguage = interviewLanguage === "kn" ? "kn-IN" : 
+                         interviewLanguage === "hi" ? "hi-IN" : "en-IN";
+    }
+    
+    console.log(`[Interview] Starting with: name="${candidateName}", language="${interviewLanguage}"`);
+    
     return (
       <div className="min-h-[100dvh] bg-dark-100">
         <Agent
-          userName="Candidate" // We can fetch actual name if we return it from API, but default to Candidate
+          userName={candidateName}
           userId={interview.userId}
           interviewId={interview.id}
           type="interview"
           questions={interview.questions || []}
-          language={interview.interviewLanguage || "en-IN"}
-          trade={interview.role || "General"}
+          language={interviewLanguage}
+          trade={interview.role || interview.trade || "General"}
         />
       </div>
     );

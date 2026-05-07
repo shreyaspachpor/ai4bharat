@@ -34,7 +34,9 @@ async def generate_interview(req: GenerateInterviewRequest):
 
     questions = get_questions(trade, lang, count)
 
+    interview_id = str(uuid.uuid4())
     interview = {
+        "interviewId": interview_id,
         "role": trade,
         "type": "trade",
         "level": "N/A",
@@ -45,10 +47,10 @@ async def generate_interview(req: GenerateInterviewRequest):
         "createdAt": datetime.utcnow().isoformat(),
         "district": (req.district or "").strip(),
         "interviewLanguage": lang,
+        "status": "pending",
     }
 
-    doc_ref = db.collection("interviews").add(interview)
-    interview_id = doc_ref[1].id
+    db.collection("interviews").document(interview_id).set(interview)
 
     return {"success": True, "interviewId": interview_id}
 
@@ -83,8 +85,10 @@ async def generate_deep_link(req: GenerateDeepLinkRequest):
     
     questions = get_questions(trade, short_lang, 4)
     deep_link_token = str(uuid.uuid4())
+    interview_id = str(uuid.uuid4())
     
     interview = {
+        "interviewId": interview_id,
         "role": trade,
         "type": "trade",
         "level": "N/A",
@@ -97,11 +101,11 @@ async def generate_deep_link(req: GenerateDeepLinkRequest):
         "interviewLanguage": req.language, # Store full language code like 'kn-IN'
         "deep_link_token": deep_link_token,
         "changed_by_admin": req.changed_by_admin,
-        "consent_confirmed": req.consent_confirmed
+        "consent_confirmed": req.consent_confirmed,
+        "status": "pending",
     }
 
-    doc_ref = db.collection("interviews").add(interview)
-    interview_id = doc_ref[1].id
+    db.collection("interviews").document(interview_id).set(interview)
 
     return {"success": True, "token": deep_link_token, "interviewId": interview_id}
 
@@ -122,12 +126,18 @@ async def get_interview_by_token(token: str):
 async def get_interview(interview_id: str):
     """Get a single interview by ID."""
     db = get_db()
+    
+    # First try by document ID
     doc = db.collection("interviews").document(interview_id).get()
-
-    if not doc.exists:
-        raise HTTPException(status_code=404, detail="Interview not found")
-
-    return {"id": doc.id, **doc.to_dict()}
+    if doc.exists:
+        return {"success": True, "id": doc.id, **doc.to_dict()}
+    
+    # Then try by interviewId field
+    docs = db.collection("interviews").where("interviewId", "==", interview_id).limit(1).stream()
+    for doc in docs:
+        return {"success": True, "id": doc.id, **doc.to_dict()}
+    
+    raise HTTPException(status_code=404, detail="Interview not found")
 
 
 @router.get("/user/{user_id}")

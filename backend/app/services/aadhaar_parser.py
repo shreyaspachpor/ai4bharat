@@ -39,6 +39,27 @@ def get_aadhaar_info_qr(secured_qr_data: str) -> dict:
         obj = AadhaarSecureQr(int(secured_qr_data))
         output_json = get_json_data(json_data, obj)
 
+        # Flatten the nested structure for frontend consumption
+        # Frontend expects flat structure with top-level fields like 'name', 'dob', etc.
+        if "msgdata" in output_json and "userdata" in output_json["msgdata"]:
+            userdata = output_json["msgdata"]["userdata"]
+            # Return flat structure with essential fields
+            return {
+                "name": userdata.get("name", ""),
+                "dob": userdata.get("dob", ""),
+                "gender": userdata.get("gender", ""),
+                "address": f"{userdata.get('house', '')} {userdata.get('street', '')} {userdata.get('location', '')}".strip(),
+                "district": userdata.get("district", ""),
+                "state": userdata.get("state", ""),
+                "pincode": userdata.get("pincode", ""),
+                "mobile": userdata.get("mobile", False),
+                "email": userdata.get("email", False),
+                "aadhaar_last_4": userdata.get("aadhaar_last_4_digit", ""),
+                "referenceid": userdata.get("referenceid", ""),
+                "image": userdata.get("image", None),
+                "raw_data": output_json  # Include full data for debugging
+            }
+        
         return output_json
     except Exception as e:
         return {

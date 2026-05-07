@@ -27,6 +27,13 @@ import {
 import type { CreateAssistantDTO } from "@vapi-ai/web/dist/api";
 import type { AgentProps } from "@/types";
 
+interface Message {
+  type: string;
+  transcript?: string;
+  transcriptType?: "partial" | "final";
+  role?: "user" | "assistant";
+}
+
 function formatVapiFailure(reason: unknown): string {
   if (reason instanceof Error) return reason.message;
   if (typeof reason === "string") return reason;
@@ -227,6 +234,15 @@ const Agent = ({
       .then(async () => {
         // Drop recent mic chunks so we don't accidentally STT the assistant audio.
         clearUtteranceChunks();
+        
+        // For English, use Vapi's 11Labs TTS (skip Sarvam)
+        if (lang === "en-IN") {
+          console.log("Using Vapi/11Labs TTS for English");
+          unmuteVapiRemotePlayback();
+          return;
+        }
+        
+        // For Hindi and Kannada, use Sarvam
         try {
           await speakText(text, lang);
         } catch (e) {
@@ -257,6 +273,12 @@ const Agent = ({
     }
     const audioTracks = stream.getAudioTracks();
     if (!audioTracks.length) {
+      return;
+    }
+
+    // For English, skip client-side STT (let Vapi/Deepgram handle it)
+    if (languageRef.current === "en-IN") {
+      console.log("English interview: Using Vapi/Deepgram STT, skipping Sarvam silence detector");
       return;
     }
 
@@ -754,8 +776,10 @@ const Agent = ({
         console.log(`✅ Capturing [${message.role}]:`, content);
 
         if (content.split(" ").length >= 2) {
-          const newMessage = { role: message.role, content };
-          setMessages((prev) => [...prev, newMessage]);
+          if (message.role && (message.role === "user" || message.role === "assistant")) {
+            const newMessage: SavedMessage = { role: message.role, content };
+            setMessages((prev) => [...prev, newMessage]);
+          }
 
           if (message.role === "user") {
             setUserTranscript((prev) => {

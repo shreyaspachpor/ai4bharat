@@ -25,6 +25,11 @@ async def post_aadhaar_qr_data(payload: AadharQr):
     from app.services.aadhaar_parser import get_aadhaar_info_qr
 
     result = get_aadhaar_info_qr(qr_text)
+    
+    # Check for parser errors
+    if result.get("status") == "Failure":
+        raise HTTPException(status_code=422, detail=result.get("message", "Failed to parse Aadhaar QR"))
+    
     return result
 
 
@@ -75,7 +80,13 @@ async def post_aadhaar_qr_image(file: UploadFile = File(...)):
 
     from app.services.aadhaar_parser import get_aadhaar_info_qr
 
-    return get_aadhaar_info_qr(qr_text)
+    result = get_aadhaar_info_qr(qr_text)
+    
+    # Check for parser errors
+    if result.get("status") == "Failure":
+        raise HTTPException(status_code=422, detail=result.get("message", "Failed to parse Aadhaar QR"))
+    
+    return result
 
 
 @router.get("/getaadhaarinfo/qrdata/")
@@ -101,7 +112,17 @@ async def get_aadhar_data(pdf_path: str, password: str):
         if not qr_data:
             return {"error": "No QR data found in extracted image."}
 
-        value = get_aadhaar_info_qr(qr_data)
+        # Validate QR data is numeric
+        qr_data_str = qr_data.strip() if isinstance(qr_data, str) else str(qr_data)
+        if not qr_data_str.isdigit():
+            return {"error": f"Invalid Aadhaar QR format. Expected numeric data, got: {qr_data_str[:50]}"}
+
+        value = get_aadhaar_info_qr(qr_data_str)
+        
+        # Check for parser errors
+        if value.get("status") == "Failure":
+            return {"error": value.get("message", "Failed to parse Aadhaar QR")}
+        
         return value
     except HTTPException as e:
         raise e
@@ -135,7 +156,20 @@ async def post_aadhaar_pdf(file: UploadFile = File(...), password: str = Form(""
         if not qr_data:
             raise HTTPException(status_code=422, detail="No QR data found in extracted image.")
 
-        value = get_aadhaar_info_qr(qr_data)
+        # Validate QR data is numeric (Aadhaar secure QR is numeric-only)
+        qr_data_str = qr_data.strip() if isinstance(qr_data, str) else str(qr_data)
+        if not qr_data_str.isdigit():
+            raise HTTPException(
+                status_code=422, 
+                detail=f"Invalid Aadhaar QR format. Expected numeric data, got: {qr_data_str[:50]}"
+            )
+
+        value = get_aadhaar_info_qr(qr_data_str)
+        
+        # Check for parser errors
+        if value.get("status") == "Failure":
+            raise HTTPException(status_code=422, detail=value.get("message", "Failed to parse Aadhaar QR"))
+        
         return value
     except HTTPException as e:
         raise e
