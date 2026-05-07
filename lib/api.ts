@@ -5,9 +5,9 @@
  * environments is a single env-var change.
  */
 
-const API_BASE = typeof window !== "undefined"
-  ? process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"
-  : "http://127.0.0.1:8000";
+const API_BASE =
+  process.env.NEXT_PUBLIC_API_URL ||
+  (typeof window !== "undefined" ? window.location.origin : "http://127.0.0.1:8001");
 
 type RequestOpts = {
   method?: string;
