@@ -10,3 +10,4 @@ python-multipart==0.0.20
 opencv-python-headless>=4.8.0
 numpy>=1.24.0
 PyMuPDF>=1.23.0
+Pillow>=10.0.0

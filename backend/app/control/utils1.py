@@ -28,13 +28,13 @@ def AadhaarQrAuto(data):
 
 def Qr_img_to_text(file):
     import cv2
-    from pyzbar.pyzbar import decode
 
     img = cv2.imread(file)
+    if img is None:
+        return []
     gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-    code = decode(gray)
-    totaldata = []
-    for i in code:
-        decodeddata = i.data.decode("utf-8")
-        totaldata.append(decodeddata)
-    return totaldata
+    detector = cv2.QRCodeDetector()
+    data, _, _ = detector.detectAndDecode(gray)
+    if data:
+        return [data]
+    return []
