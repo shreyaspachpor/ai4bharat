@@ -1,4 +1,4 @@
-"""Aadhaar QR code extraction & decoding utilities (no pyzbar dependency)."""
+"""Aadhaar QR code extraction & decoding utilities (no pyzbar / no system deps)."""
 
 from fastapi import HTTPException
 
@@ -34,25 +34,46 @@ def decode_qr_text(img) -> str | None:
     else:
         gray = img
 
-    # Try on original color and grayscale
-    for candidate in (img, gray):
-        text = decode_qr_text_opencv(candidate)
-        if text:
-            return text
+    # 1. Try color image directly
+    text = decode_qr_text_opencv(img)
+    if text:
+        return text
 
-    # Try upscaled version for small QR codes
+    # 2. Try grayscale
+    text = decode_qr_text_opencv(gray)
+    if text:
+        return text
+
+    # 3. Upscale small images
     h, w = gray.shape[:2]
-    scale = 2 if max(h, w) < 1200 else 1
-    if scale != 1:
+    for scale in [2, 3, 4]:
         resized = cv2.resize(gray, (w * scale, h * scale), interpolation=cv2.INTER_CUBIC)
         text = decode_qr_text_opencv(resized)
         if text:
             return text
 
-    # Try binarized/thresholded version
+    # 4. Binarize with Otsu
     try:
         _, thresh = cv2.threshold(gray, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
         text = decode_qr_text_opencv(thresh)
+        if text:
+            return text
+        # Upscale binarized too
+        h2, w2 = thresh.shape[:2]
+        for scale in [2, 3]:
+            resized = cv2.resize(thresh, (w2 * scale, h2 * scale), interpolation=cv2.INTER_NEAREST)
+            text = decode_qr_text_opencv(resized)
+            if text:
+                return text
+    except Exception:
+        pass
+
+    # 5. Adaptive threshold
+    try:
+        adaptive = cv2.adaptiveThreshold(
+            gray, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY, 11, 2
+        )
+        text = decode_qr_text_opencv(adaptive)
         if text:
             return text
     except Exception:
@@ -104,10 +125,60 @@ def extract_qr_region(gray_img):
     return None
 
 
-def extract_images_from_pdf(pdf_path: str = None, password: str = "", pdf_bytes: bytes = None) -> list:
-    """Extract images from specific pages of an Aadhaar PDF."""
+def _render_page_to_cv2(page, dpi: int = 300):
+    """Render a PyMuPDF page to a numpy/cv2 BGR image at the given DPI."""
+    import numpy as np
+    import cv2
+
+    zoom = dpi / 72.0
+    mat = __import__("fitz").Matrix(zoom, zoom)
+    pix = page.get_pixmap(matrix=mat, alpha=False)
+    img_bytes = pix.tobytes("png")
+    np_arr = np.frombuffer(img_bytes, np.uint8)
+    img_bgr = cv2.imdecode(np_arr, cv2.IMREAD_COLOR)
+    return img_bgr
+
+
+def decode_qr_from_pdf_bytes(pdf_bytes: bytes, password: str = "") -> str | None:
+    """
+    Primary extraction path: render each PDF page at 300 DPI and scan for QR codes.
+    This is far more reliable than extracting embedded sub-images.
+    """
     try:
-        import fitz  # PyMuPDF
+        import fitz
+    except ImportError:
+        return None
+
+    try:
+        doc = fitz.open(stream=pdf_bytes, filetype="pdf")
+    except Exception:
+        return None
+
+    if doc.is_encrypted:
+        if not doc.authenticate(password):
+            return None
+
+    for page_num in range(min(len(doc), 10)):  # check first 10 pages
+        page = doc.load_page(page_num)
+        try:
+            img_bgr = _render_page_to_cv2(page, dpi=300)
+            text = decode_qr_text(img_bgr)
+            if text and text.strip().isdigit():
+                return text.strip()
+        except Exception:
+            continue
+
+    return None
+
+
+def extract_images_from_pdf(pdf_path: str = None, password: str = "", pdf_bytes: bytes = None) -> list:
+    """
+    Extract images from an Aadhaar PDF.
+    Primary: full-page render at 300 DPI (most reliable for QR decoding).
+    Fallback: embedded image extraction.
+    """
+    try:
+        import fitz
         import cv2
         import numpy as np
     except ImportError as e:
@@ -129,35 +200,38 @@ def extract_images_from_pdf(pdf_path: str = None, password: str = "", pdf_bytes:
 
     images = []
     image_count = 1
-    target_pages = [0, 8]
 
-    for page_num in target_pages:
-        if page_num < len(pdf_document):
-            page = pdf_document.load_page(page_num)
-            image_list = page.get_images(full=True)
+    # --- Primary: render full pages at 300 DPI ---
+    for page_num in range(min(len(pdf_document), 10)):
+        page = pdf_document.load_page(page_num)
+        try:
+            img_bgr = _render_page_to_cv2(page, dpi=300)
+            img_type = "QR Code" if page_num == 0 else "Page"
+            images.append((image_count, img_bgr, img_type))
+            image_count += 1
+        except Exception:
+            continue
 
-            for img_index in range(len(image_list)):
-                xref = image_list[img_index][0]
-                base_image = pdf_document.extract_image(xref)
-                image_bytes = base_image["image"]
-                image_np_array = np.frombuffer(image_bytes, np.uint8)
-                image_bgr = cv2.imdecode(image_np_array, cv2.IMREAD_COLOR)
-
-                # Determine type using OpenCV QR detector (no pyzbar)
-                if image_count == 1:
-                    image_type = "QR Code"
-                elif image_count == 8:
-                    image_type = "Photo"
-                else:
-                    qr_data = decode_qr_text_opencv(image_bgr)
-                    image_type = "QR Code" if qr_data else "Photo"
-
-                images.append((image_count, image_bgr, image_type))
-                image_count += 1
+    # --- Fallback: embedded image extraction ---
+    if not images:
+        target_pages = [0, min(8, len(pdf_document) - 1)]
+        for page_num in target_pages:
+            if page_num < len(pdf_document):
+                page = pdf_document.load_page(page_num)
+                image_list = page.get_images(full=True)
+                for img_info in image_list:
+                    xref = img_info[0]
+                    base_image = pdf_document.extract_image(xref)
+                    image_bytes = base_image["image"]
+                    image_np_array = np.frombuffer(image_bytes, np.uint8)
+                    image_bgr = cv2.imdecode(image_np_array, cv2.IMREAD_COLOR)
+                    if image_bgr is not None:
+                        images.append((image_count, image_bgr, "QR Code"))
+                        image_count += 1
 
     return images
 
 
-def extract_qr_data_opencv(img) -> str | None:
-    """Decode QR data from image using OpenCV only."""
+def decode_qr_text_opencv_only(img) -> str | None:
+    """Alias for compatibility."""
     return decode_qr_text_opencv(img)

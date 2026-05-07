@@ -123,7 +123,7 @@ async def get_aadhar_data(pdf_path: str, password: str):
 
 @router.post("/getaadhaarinfo/pdf/")
 async def post_aadhaar_pdf(file: UploadFile = File(...), password: str = Form("")):
-    from app.services.aadhaar_service import extract_images_from_pdf, decode_qr_text
+    from app.services.aadhaar_service import decode_qr_from_pdf_bytes, extract_images_from_pdf, decode_qr_text
     from app.services.aadhaar_parser import get_aadhaar_info_qr
 
     content = await file.read()
@@ -131,29 +131,33 @@ async def post_aadhaar_pdf(file: UploadFile = File(...), password: str = Form(""
         raise HTTPException(status_code=400, detail="Empty file")
 
     try:
-        images_from_pdf = extract_images_from_pdf(pdf_bytes=content, password=password)
-        
-        qr_data = None
-        for img_num, img_bgr, img_type in images_from_pdf:
-            data = decode_qr_text(img_bgr)
-            if data and data.isdigit():
-                qr_data = data
-                break
-                
+        # Primary: full-page render at 300 DPI (most reliable for Aadhaar QR)
+        qr_data = decode_qr_from_pdf_bytes(content, password=password)
+
+        # Fallback: embedded image extraction
         if not qr_data:
-            raise HTTPException(status_code=422, detail="No valid numeric QR data found in PDF images.")
+            images_from_pdf = extract_images_from_pdf(pdf_bytes=content, password=password)
+            for img_num, img_bgr, img_type in images_from_pdf:
+                data = decode_qr_text(img_bgr)
+                if data and data.strip().isdigit():
+                    qr_data = data.strip()
+                    break
 
-        qr_data_str = qr_data.strip() if isinstance(qr_data, str) else str(qr_data)
+        if not qr_data:
+            raise HTTPException(
+                status_code=422,
+                detail="No valid Aadhaar QR code found in the PDF. Ensure this is an e-Aadhaar PDF.",
+            )
 
-        value = get_aadhaar_info_qr(qr_data_str)
-        
-        # Check for parser errors
+        value = get_aadhaar_info_qr(qr_data)
+
         if value.get("status") == "Failure":
             raise HTTPException(status_code=422, detail=value.get("message", "Failed to parse Aadhaar QR"))
-        
+
         return value
     except HTTPException as e:
         raise e
     except Exception as e:
-         raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=str(e))
+
 
