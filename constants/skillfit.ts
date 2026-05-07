@@ -1,0 +1,48 @@
+export const KARNATAKA_DISTRICTS = [
+  "Bagalkote",
+  "Ballari",
+  "Belagavi",
+  "Bengaluru Rural",
+  "Bengaluru Urban",
+  "Bidar",
+  "Chamarajanagar",
+  "Chikkaballapur",
+  "Chikkamagaluru",
+  "Chitradurga",
+  "Dakshina Kannada",
+  "Davanagere",
+  "Dharwad",
+  "Gadag",
+  "Hassan",
+  "Haveri",
+  "Kalaburagi",
+  "Kodagu",
+  "Kolar",
+  "Koppal",
+  "Mandya",
+  "Mysuru",
+  "Raichur",
+  "Ramanagara",
+  "Shivamogga",
+  "Tumakuru",
+  "Udupi",
+  "Uttara Kannada",
+  "Vijayapura",
+  "Yadgir",
+  "Vijayanagara",
+];
+
+export const TRADES = [
+  "Electrician",
+  "Plumber",
+  "Welder",
+  "Mason",
+  "Carpenter",
+  "Helper",
+];
+
+export const LANGUAGES = [
+  { code: "kn", label: "Kannada", native: "ಕನ್ನಡ" },
+  { code: "hi", label: "Hindi", native: "हिन्दी" },
+  { code: "en", label: "English", native: "English" },
+] as const;
