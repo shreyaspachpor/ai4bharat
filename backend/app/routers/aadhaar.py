@@ -91,7 +91,7 @@ async def post_aadhaar_qr_image(file: UploadFile = File(...)):
 
 @router.get("/getaadhaarinfo/qrdata/")
 async def get_aadhar_data(pdf_path: str, password: str):
-    from app.services.aadhaar_service import extract_images_from_pdf, extract_qr_data_pyzbar
+    from app.services.aadhaar_service import extract_images_from_pdf, decode_qr_text
     from app.services.aadhaar_parser import get_aadhaar_info_qr
 
     try:
@@ -99,10 +99,7 @@ async def get_aadhar_data(pdf_path: str, password: str):
         
         qr_data = None
         for img_num, img_bgr, img_type in images_from_pdf:
-            data = extract_qr_data_pyzbar(img_bgr)
-            if not data:
-                from app.services.aadhaar_service import decode_qr_text
-                data = decode_qr_text(img_bgr)
+            data = decode_qr_text(img_bgr)
             if data and data.isdigit():
                 qr_data = data
                 break
@@ -126,7 +123,7 @@ async def get_aadhar_data(pdf_path: str, password: str):
 
 @router.post("/getaadhaarinfo/pdf/")
 async def post_aadhaar_pdf(file: UploadFile = File(...), password: str = Form("")):
-    from app.services.aadhaar_service import extract_images_from_pdf, extract_qr_data_pyzbar
+    from app.services.aadhaar_service import extract_images_from_pdf, decode_qr_text
     from app.services.aadhaar_parser import get_aadhaar_info_qr
 
     content = await file.read()
@@ -138,10 +135,7 @@ async def post_aadhaar_pdf(file: UploadFile = File(...), password: str = Form(""
         
         qr_data = None
         for img_num, img_bgr, img_type in images_from_pdf:
-            data = extract_qr_data_pyzbar(img_bgr)
-            if not data:
-                from app.services.aadhaar_service import decode_qr_text
-                data = decode_qr_text(img_bgr)
+            data = decode_qr_text(img_bgr)
             if data and data.isdigit():
                 qr_data = data
                 break
