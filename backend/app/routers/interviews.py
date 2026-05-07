@@ -211,7 +211,12 @@ async def delete_interview(interview_id: str, user_id: str):
         return {"success": False, "error": "Interview not found"}
 
     data = doc.to_dict()
-    if data.get("userId") != user_id:
+    
+    # Check if the user is a Government Admin
+    admin_doc = db.collection("admins").document(user_id).get()
+    is_govt_admin = admin_doc.exists and admin_doc.to_dict().get("role") == "govt"
+
+    if not is_govt_admin and data.get("userId") != user_id and data.get("ngoId") != user_id:
         return {"success": False, "error": "You can only delete your own interviews"}
 
     # Delete feedback first

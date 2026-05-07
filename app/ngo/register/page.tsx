@@ -15,12 +15,13 @@ import {
   getInterviewBaseUrl,
   getWhatsappMessage,
   markLinkSent,
+  deleteInterview,
 } from "@/lib/skillfit";
 import type { InterviewLanguage, InterviewRecord } from "@/types/skillfit";
 
 type CandidateForm = {
   name: string;
-  aadhaarLast4: string;
+  aadhaar_last_4: string;
   phone: string;
   district: string;
   dob: string;
@@ -31,13 +32,13 @@ type CandidateForm = {
 };
 
 const defaultForm: CandidateForm = {
-  name: "Raju Kumar",
-  aadhaarLast4: "3421",
-  phone: "9876543210",
+  name: "",
+  aadhaar_last_4: "",
+  phone: "",
   district: "Mysuru",
-  dob: "15-Jun-1990",
+  dob: "",
   gender: "M",
-  address: "Hunsur Rd",
+  address: "",
   trade: "Electrician",
   language: "kn",
 };
@@ -56,6 +57,7 @@ export default function NgoRegisterPage() {
   const [manualMode, setManualMode] = useState(false);
   const [extracting, setExtracting] = useState(false);
   const [aadhaarPassword, setAadhaarPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [form, setForm] = useState<CandidateForm>(defaultForm);
   const [rows, setRows] = useState<InterviewRecord[]>([]);
   const [search, setSearch] = useState("");
@@ -101,7 +103,12 @@ export default function NgoRegisterPage() {
               : statusFilter === "Link sent"
                 ? r.status === "link_sent"
                 : r.status === "completed"
-        ),
+        )
+        .sort((a, b) => {
+          const tA = (a.createdAt as any)?.seconds || 0;
+          const tB = (b.createdAt as any)?.seconds || 0;
+          return tB - tA;
+        }),
     [rows, search, tradeFilter, districtFilter, statusFilter]
   );
 
@@ -158,7 +165,13 @@ export default function NgoRegisterPage() {
       try {
         const isPdf = file.type.includes("pdf") || file.name.toLowerCase().endsWith(".pdf");
         if (isPdf) {
-          const parsed = await apiVerifyAadhaarPdf(file, aadhaarPassword || undefined);
+          if (!aadhaarPassword) {
+            toast.error("Please enter the Aadhaar PDF password first.");
+            setExtracting(false);
+            return;
+          }
+          const res = await apiVerifyAadhaarPdf(file, aadhaarPassword);
+          const parsed = res?.msgdata?.userdata || res;
           setForm((prev) => ({
             ...prev,
             name: parsed?.name || prev.name,
@@ -167,7 +180,7 @@ export default function NgoRegisterPage() {
             dob: parsed?.dob || prev.dob,
             gender: (parsed?.gender as "M" | "F" | "O") || prev.gender,
             address: parsed?.address || prev.address,
-            aadhaarLast4: String(parsed?.aadhaar_last4 || prev.aadhaarLast4),
+            aadhaar_last_4: String(parsed?.aadhaar_last_4 || parsed?.aadhaar_last_4_digit || parsed?.aadhaar_last4 || prev.aadhaar_last_4),
           }));
           toast.success("Aadhaar PDF extracted");
           setManualMode(true);
@@ -182,10 +195,11 @@ export default function NgoRegisterPage() {
         } else {
           toast("Could not decode image QR, loaded manual form defaults");
         }
-      } catch {
+      } catch (err: any) {
+        console.error("Aadhaar extraction error:", err);
         setManualMode(true);
         fillFromQr();
-        toast.error("Upload parsing failed, use manual edit.");
+        toast.error(`Upload parsing failed: ${err.message || "Unknown error"}`);
       } finally {
         setExtracting(false);
       }
@@ -210,11 +224,23 @@ export default function NgoRegisterPage() {
     []
   );
 
+  const handleDelete = async (row: InterviewRecord) => {
+    if (!row.id || !user?.uid) return;
+    if (window.confirm(`Are you sure you want to delete ${row.candidateName}?`)) {
+      try {
+        await deleteInterview(row.id, user.uid);
+        toast.success("Candidate deleted");
+      } catch (err: any) {
+        toast.error(err.message || "Failed to delete");
+      }
+    }
+  };
+
   const handleCreateAndSend = async () => {
     if (!user?.uid || !profile?.centerName) return;
     const created = await createInterview({
       candidateName: form.name,
-      aadhaarLast4: form.aadhaarLast4,
+      aadhaarLast4: form.aadhaar_last_4,
       phone: form.phone,
       district: form.district,
       trade: form.trade,
@@ -242,23 +268,34 @@ export default function NgoRegisterPage() {
           <p className="font-semibold">AI SkillFit</p>
           <p className="text-zinc-400 text-sm">- NGO Operator Panel</p>
         </div>
-        <div className="flex items-center gap-3 text-sm">
-          <span className="text-zinc-400">{profile.centerName}, {profile.district}</span>
-          <button onClick={logout} className="rounded-md border border-white/20 px-3 py-1.5">Logout</button>
+        <div className="flex items-center gap-4 text-sm">
+          <span className="text-zinc-400">{profile.centerName} ({profile.district})</span>
+          <button onClick={logout} className="rounded border border-white/20 px-3 py-1.5 hover:bg-white/5">Logout</button>
         </div>
       </nav>
 
       <div className="px-3 sm:px-4 py-4">
-        <div className="flex gap-3 mb-4">
-          <button onClick={() => setTab("register")} className={`px-4 py-2 rounded-lg text-sm ${tab === "register" ? "bg-blue-600" : "bg-white/5"}`}>Register Candidate</button>
-          <button onClick={() => setTab("all")} className={`px-4 py-2 rounded-lg text-sm ${tab === "all" ? "bg-blue-600" : "bg-white/5"}`}>All Candidates</button>
-        </div>
-
         <div className="grid grid-cols-1 xl:grid-cols-[300px_1fr] gap-4">
           <section className="rounded-xl border border-white/10 bg-white/5 p-3">
             <p className="text-xs text-zinc-400">STEP 1 - UPLOAD AADHAAR</p>
-            <label className="block w-full mt-2 rounded-xl border border-dashed border-white/25 p-4 cursor-pointer">
-              <p className="text-sm font-medium">Upload Aadhaar PDF or Image</p>
+            <div className="relative mt-2 mb-2">
+              <input
+                type={showPassword ? "text" : "password"}
+                value={aadhaarPassword}
+                onChange={(e) => setAadhaarPassword(e.target.value)}
+                placeholder="1. Enter PDF password"
+                className="w-full rounded bg-black/30 px-2 py-2 pr-14 text-sm border border-white/20 focus:border-blue-400 outline-none"
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                className="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-zinc-400 hover:text-white"
+              >
+                {showPassword ? "Hide" : "Show"}
+              </button>
+            </div>
+            <label className="block w-full rounded-xl border border-dashed border-white/25 p-4 cursor-pointer hover:bg-white/5 transition-colors">
+              <p className="text-sm font-medium">2. Upload Aadhaar PDF</p>
               <p className="text-xs text-zinc-400 mt-1">Auto-extract name, phone, district and DOB</p>
               <input
                 type="file"
@@ -267,15 +304,10 @@ export default function NgoRegisterPage() {
                 onChange={(e) => {
                   const file = e.target.files?.[0];
                   if (file) void handleAadhaarUpload(file);
+                  e.target.value = '';
                 }}
               />
             </label>
-            <input
-              value={aadhaarPassword}
-              onChange={(e) => setAadhaarPassword(e.target.value)}
-              placeholder="PDF password (optional)"
-              className="mt-2 w-full rounded bg-black/30 px-2 py-1.5 text-sm"
-            />
             {!!uploadedFileName && <p className="mt-1 text-xs text-zinc-500 truncate">{uploadedFileName}</p>}
             {extracting && <p className="mt-1 text-xs text-blue-300">Extracting details...</p>}
             <button onClick={() => setManualMode(true)} className="mt-2 text-xs underline text-zinc-400">or enter manually</button>
@@ -283,8 +315,10 @@ export default function NgoRegisterPage() {
             {(manualMode || form.name) && (
               <div className="mt-3 rounded-lg border border-white/10 p-3 space-y-2 text-sm">
                 <input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} className="w-full rounded bg-black/30 px-2 py-1.5" />
-                <div className="text-zinc-300 text-xs">XXXX-XXXX-{form.aadhaarLast4} - {form.gender} - {age} yrs</div>
-                <input value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} className="w-full rounded bg-black/30 px-2 py-1.5" />
+                <div className="text-zinc-300 text-xs">
+                  XXXX-XXXX-{form.aadhaar_last_4} - {form.gender} - {age} yrs
+                </div>
+                <input placeholder="Phone Number" value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} className="w-full rounded bg-black/30 px-2 py-1.5" />
                 <select value={form.district} onChange={(e) => setForm({ ...form, district: e.target.value })} className="w-full rounded bg-black/30 px-2 py-1.5">
                   {KARNATAKA_DISTRICTS.map((d) => <option key={d}>{d}</option>)}
                 </select>
@@ -338,20 +372,33 @@ export default function NgoRegisterPage() {
             <div className="mt-3 overflow-x-auto">
               <table className="w-full text-sm">
                 <thead className="text-zinc-400">
-                  <tr>
-                    <th className="text-left py-2">Candidate</th><th className="text-left">Trade</th><th className="text-left">District</th><th>Language</th><th>Status</th><th>Date</th><th>Action</th>
+                  <tr className="border-b border-white/10">
+                    <th className="text-left py-3 px-2 font-medium">Candidate</th>
+                    <th className="text-left py-3 px-2 font-medium">Trade</th>
+                    <th className="text-left py-3 px-2 font-medium">District</th>
+                    <th className="text-left py-3 px-2 font-medium">Language</th>
+                    <th className="text-left py-3 px-2 font-medium">Status</th>
+                    <th className="text-left py-3 px-2 font-medium">Date</th>
+                    <th className="text-left py-3 px-2 font-medium">Action</th>
                   </tr>
                 </thead>
                 <tbody>
                   {filteredRows.map((r) => (
-                    <tr key={r.id} className="border-t border-white/10">
-                      <td className="py-2"><p>{r.candidateName}</p><p className="text-xs text-zinc-500">{r.phone}</p></td>
-                      <td>{r.trade}</td><td>{r.district}</td><td className="text-center">{String(r.language).toUpperCase()}</td>
-                      <td><span className="text-xs">{statusLabel[r.status]}</span></td>
-                      <td>{r.createdAt ? new Date((r.createdAt as { seconds?: number }).seconds ? (r.createdAt as { seconds: number }).seconds * 1000 : Date.now()).toLocaleDateString("en-IN") : "-"}</td>
-                      <td>
+                    <tr key={r.id} className="border-b border-white/5">
+                      <td className="py-3 px-2"><p>{r.candidateName}</p><p className="text-xs text-zinc-500">{r.phone}</p></td>
+                      <td className="py-3 px-2">{r.trade}</td>
+                      <td className="py-3 px-2">{r.district}</td>
+                      <td className="py-3 px-2 text-left">{String(r.language).toUpperCase()}</td>
+                      <td className="py-3 px-2"><span className={`px-2 py-1 rounded text-xs ${
+                        r.status === 'completed' ? 'bg-emerald-500/20 text-emerald-300' :
+                        r.status === 'flagged' ? 'bg-red-500/20 text-red-300' :
+                        r.status === 'link_sent' ? 'bg-blue-500/20 text-blue-300' :
+                        'bg-zinc-500/20 text-zinc-300'
+                      }`}>{statusLabel[r.status]}</span></td>
+                      <td className="py-3 px-2">{r.createdAt ? new Date((r.createdAt as { seconds?: number }).seconds ? (r.createdAt as { seconds: number }).seconds * 1000 : Date.now()).toLocaleDateString("en-IN") : "-"}</td>
+                      <td className="py-3 px-2 space-x-3">
                         {r.status === "completed" ? (
-                          <button onClick={() => setSelected(r)} className="text-emerald-300">View result</button>
+                          <button onClick={() => setSelected(r)} className="text-emerald-300 hover:underline">View result</button>
                         ) : (
                           <button
                             onClick={() =>
@@ -363,11 +410,12 @@ export default function NgoRegisterPage() {
                                 language: r.language,
                               })
                             }
-                            className="text-blue-300"
+                            className="text-blue-300 hover:underline"
                           >
                             {r.status === "pending" ? "Send now" : "Resend"}
                           </button>
                         )}
+                        <button onClick={() => handleDelete(r)} className="text-red-400 hover:underline">Delete</button>
                       </td>
                     </tr>
                   ))}

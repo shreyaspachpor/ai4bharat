@@ -97,25 +97,20 @@ async def get_aadhar_data(pdf_path: str, password: str):
     try:
         images_from_pdf = extract_images_from_pdf(pdf_path, password)
         
-        # Look for the QR Code image (should be the first one based on target_pages)
-        qr_image = None
+        qr_data = None
         for img_num, img_bgr, img_type in images_from_pdf:
-            if img_num == 1 or img_type == 'QR Code':
-                qr_image = img_bgr
+            data = extract_qr_data_pyzbar(img_bgr)
+            if not data:
+                from app.services.aadhaar_service import decode_qr_text
+                data = decode_qr_text(img_bgr)
+            if data and data.isdigit():
+                qr_data = data
                 break
                 
-        if qr_image is None:
-             return {"error": "No QR image found in PDF."}
-
-        qr_data = extract_qr_data_pyzbar(qr_image)
-
         if not qr_data:
-            return {"error": "No QR data found in extracted image."}
+            return {"error": "No valid numeric QR data found in PDF images."}
 
-        # Validate QR data is numeric
         qr_data_str = qr_data.strip() if isinstance(qr_data, str) else str(qr_data)
-        if not qr_data_str.isdigit():
-            return {"error": f"Invalid Aadhaar QR format. Expected numeric data, got: {qr_data_str[:50]}"}
 
         value = get_aadhaar_info_qr(qr_data_str)
         
@@ -141,28 +136,20 @@ async def post_aadhaar_pdf(file: UploadFile = File(...), password: str = Form(""
     try:
         images_from_pdf = extract_images_from_pdf(pdf_bytes=content, password=password)
         
-        # Look for the QR Code image (should be the first one based on target_pages)
-        qr_image = None
+        qr_data = None
         for img_num, img_bgr, img_type in images_from_pdf:
-            if img_num == 1 or img_type == 'QR Code':
-                qr_image = img_bgr
+            data = extract_qr_data_pyzbar(img_bgr)
+            if not data:
+                from app.services.aadhaar_service import decode_qr_text
+                data = decode_qr_text(img_bgr)
+            if data and data.isdigit():
+                qr_data = data
                 break
                 
-        if qr_image is None:
-             raise HTTPException(status_code=422, detail="No QR image found in PDF.")
-
-        qr_data = extract_qr_data_pyzbar(qr_image)
-
         if not qr_data:
-            raise HTTPException(status_code=422, detail="No QR data found in extracted image.")
+            raise HTTPException(status_code=422, detail="No valid numeric QR data found in PDF images.")
 
-        # Validate QR data is numeric (Aadhaar secure QR is numeric-only)
         qr_data_str = qr_data.strip() if isinstance(qr_data, str) else str(qr_data)
-        if not qr_data_str.isdigit():
-            raise HTTPException(
-                status_code=422, 
-                detail=f"Invalid Aadhaar QR format. Expected numeric data, got: {qr_data_str[:50]}"
-            )
 
         value = get_aadhaar_info_qr(qr_data_str)
         

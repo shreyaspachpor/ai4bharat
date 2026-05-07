@@ -8,7 +8,7 @@ import { toast } from "sonner";
 import { KARNATAKA_DISTRICTS, TRADES } from "@/constants/skillfit";
 import { useSkillfitAuth } from "@/components/skillfit/AuthProvider";
 import { db } from "@/firebase/client";
-import { seedDemoData } from "@/lib/skillfit";
+import { seedDemoData, deleteInterview } from "@/lib/skillfit";
 import type { InterviewRecord } from "@/types/skillfit";
 
 const FITMENTS = [
@@ -53,6 +53,11 @@ export default function GovtDashboardPage() {
           if (fitment === "All") return true;
           if (fitment === "Suspected fraud") return r.status === "flagged";
           return r.fitmentLabel === fitment;
+        })
+        .sort((a, b) => {
+          const tA = (a.createdAt as any)?.seconds || 0;
+          const tB = (b.createdAt as any)?.seconds || 0;
+          return tB - tA;
         }),
     [rows, search, district, trade, language, fitment]
   );
@@ -87,6 +92,18 @@ export default function GovtDashboardPage() {
       ...(action === "flagged" ? { status: "flagged" } : {}),
     });
     toast.success(`Updated action: ${action}`);
+  };
+
+  const handleDelete = async (row: InterviewRecord) => {
+    if (!row.id || !user?.uid) return;
+    if (window.confirm(`Are you sure you want to delete ${row.candidateName}?`)) {
+      try {
+        await deleteInterview(row.id, user.uid);
+        toast.success("Candidate deleted");
+      } catch (err: any) {
+        toast.error(err.message || "Failed to delete");
+      }
+    }
   };
 
   if (loading || !profile) return <div className="p-6 text-zinc-300">Loading...</div>;
@@ -137,7 +154,7 @@ export default function GovtDashboardPage() {
         <table className="w-full text-sm">
           <thead className="text-zinc-400 bg-white/5">
             <tr>
-              <th className="text-left p-2">Candidate</th><th className="text-left p-2">Trade</th><th className="text-left p-2">District</th><th className="text-left p-2">Language</th><th className="text-left p-2">Fitment</th><th className="text-left p-2">Scores (R/C/S)</th><th className="text-left p-2">Avg %</th><th className="text-left p-2">Actions</th>
+              <th className="text-left p-2">Candidate</th><th className="text-left p-2">Trade</th><th className="text-left p-2">District</th><th className="text-left p-2">Status</th><th className="text-left p-2">Fitment</th><th className="text-left p-2">Scores (R/C/S)</th><th className="text-left p-2">Avg %</th><th className="text-left p-2">Actions</th>
             </tr>
           </thead>
           <tbody>
@@ -148,17 +165,37 @@ export default function GovtDashboardPage() {
                   <td className="p-2">{r.candidateName}<div className="text-xs text-zinc-500">{r.district}</div></td>
                   <td className="p-2">{r.trade}</td>
                   <td className="p-2">{r.district}</td>
-                  <td className="p-2 uppercase">{r.language}</td>
-                  <td className="p-2">{r.fitmentLabel || "-"}</td>
+                  <td className="p-2">
+                    <span className={`px-2 py-0.5 rounded text-xs font-medium ${
+                      r.status === 'completed' ? 'bg-emerald-500/20 text-emerald-300' :
+                      r.status === 'flagged' ? 'bg-red-500/20 text-red-300' :
+                      r.status === 'link_sent' ? 'bg-blue-500/20 text-blue-300' :
+                      'bg-zinc-500/20 text-zinc-300'
+                    }`}>
+                      {r.status.replace('_', ' ').toUpperCase()}
+                    </span>
+                  </td>
+                  <td className="p-2">
+                    {r.fitmentLabel ? (
+                      <span className={`px-2 py-0.5 rounded text-xs font-medium ${
+                        r.fitmentLabel === 'Job-ready' ? 'bg-emerald-500/20 text-emerald-300' :
+                        r.fitmentLabel === 'Needs training' ? 'bg-amber-500/20 text-amber-300' :
+                        'bg-red-500/20 text-red-300'
+                      }`}>
+                        {r.fitmentLabel}
+                      </span>
+                    ) : "-"}
+                  </td>
                   <td className="p-2">{r.relevanceScore || 0}/{r.clarityScore || 0}/{r.skillConfidenceScore || 0}</td>
                   <td className="p-2">
                     <div>{avg}%</div>
                     <div className="h-1.5 rounded bg-white/10"><div className="h-1.5 rounded bg-emerald-500" style={{ width: `${avg}%` }} /></div>
                   </td>
                   <td className="p-2 space-x-2">
-                    <button onClick={() => setAction(r, "shortlisted")} className="text-emerald-300">Shortlist</button>
-                    <button onClick={() => setAction(r, "training")} className="text-amber-300">Training</button>
-                    <button onClick={() => setSelected(r)} className="text-blue-300">View</button>
+                    <button onClick={() => setAction(r, "shortlisted")} className="text-emerald-300 hover:underline">Shortlist</button>
+                    <button onClick={() => setAction(r, "training")} className="text-amber-300 hover:underline">Training</button>
+                    <button onClick={() => setSelected(r)} className="text-blue-300 hover:underline">View</button>
+                    <button onClick={() => handleDelete(r)} className="text-red-400 hover:underline">Delete</button>
                   </td>
                 </tr>
               );

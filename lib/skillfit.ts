@@ -11,6 +11,7 @@ import {
   serverTimestamp,
   setDoc,
   updateDoc,
+  deleteDoc,
   where,
 } from "firebase/firestore";
 
@@ -20,19 +21,44 @@ import { inferInterviewOutcome } from "@/lib/skillfit-outcome";
 
 const adminsRef = collection(db, "admins");
 const interviewsRef = collection(db, "interviews");
+import { apiDeleteInterview } from "@/lib/api";
 
 export function getInterviewBaseUrl() {
-  return process.env.NEXT_PUBLIC_APP_URL || (typeof window !== "undefined" ? window.location.origin : "http://localhost:3000");
+  if (process.env.NEXT_PUBLIC_APP_URL) {
+    return process.env.NEXT_PUBLIC_APP_URL.replace(/\/$/, ""); // strip trailing slash
+  }
+  if (typeof window !== "undefined") {
+    return window.location.origin;
+  }
+  return "http://localhost:3000";
 }
 
 export function getWhatsappMessage(language: InterviewLanguage, name: string, url: string) {
   if (language === "kn") {
-    return `ನಮಸ್ಕಾರ ${name}! AI SkillFit ಸಂದರ್ಶನಕ್ಕೆ ಸ್ವಾಗತ.\nStart interview now:\n${url}\nಈ ಲಿಂಕ್ ತೆರೆದು ಸಂದರ್ಶನ ನೀಡಿ.`;
+    return `ನಮಸ್ಕಾರ ${name}! 🙏
+
+AI SkillFit ಸಂದರ್ಶನಕ್ಕೆ ಸ್ವಾಗತ. ಕೆಳಗಿನ ಲಿಂಕ್ ತೆರೆದು ಸಂದರ್ಶನ ನೀಡಿ:
+
+${url}
+
+ಧನ್ಯವಾದಗಳು!`;
   }
   if (language === "hi") {
-    return `नमस्कार ${name}! आपका AI SkillFit साक्षात्कार लिंक:\n${url}\nStart interview now.`;
+    return `नमस्कार ${name}! 🙏
+
+आपका AI SkillFit साक्षात्कार तैयार है। नीचे दिए गए लिंक पर क्लिक करें:
+
+${url}
+
+धन्यवाद!`;
   }
-  return `Hello ${name}! Start your AI SkillFit interview now:\n${url}`;
+  return `Hello ${name}! 👋
+
+Your AI SkillFit interview is ready. Click the link below to begin:
+
+${url}
+
+Good luck!`;
 }
 
 export async function getAdminProfile(uid: string) {
@@ -121,6 +147,11 @@ export async function updateAdminAction(id: string, action: "shortlisted" | "tra
   const payload: Record<string, string> = { adminAction: action };
   if (action === "flagged") payload.status = "flagged";
   await updateDoc(doc(db, "interviews", id), payload);
+}
+
+export async function deleteInterview(id: string, userId: string) {
+  const res = await apiDeleteInterview(id, userId);
+  if (!res?.success) throw new Error(res?.error || "Failed to delete");
 }
 
 export async function seedDemoData(ngoId: string, ngoCenter: string) {
