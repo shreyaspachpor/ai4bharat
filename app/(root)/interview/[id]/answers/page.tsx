@@ -3,6 +3,8 @@ import { redirect } from "next/navigation";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 
+export const dynamic = "force-dynamic";
+
 const AnswersPage = async ({ params }: { params: Promise<{ id: string }> }) => {
   const { id } = await params;
   const { user } = await apiGetCurrentUser();

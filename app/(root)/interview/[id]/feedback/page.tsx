@@ -12,6 +12,9 @@ import { Button } from "@/components/ui/button";
 import DownloadFeedbackPDFButton from "@/components/DownloadFeedbackPDFButton";
 import { FeedbackTabs } from "@/components/FeedbackTabs";
 
+export const dynamic = "force-dynamic";
+
+
 const Feedback = async ({ params }: { params: Promise<{ id: string }> }) => {
   const { id } = await params;
   const { user } = await apiGetCurrentUser();

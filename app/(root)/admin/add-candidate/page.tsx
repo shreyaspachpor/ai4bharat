@@ -2,6 +2,8 @@ import { redirect } from "next/navigation";
 import { apiGetCurrentUser } from "@/lib/api";
 import AddCandidateForm from "./AddCandidateForm";
 
+export const dynamic = "force-dynamic";
+
 export default async function AddCandidatePage() {
   const { user } = await apiGetCurrentUser();
   

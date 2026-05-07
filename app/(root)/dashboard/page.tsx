@@ -2,6 +2,8 @@ import { redirect } from "next/navigation";
 import { apiGetCurrentUser, apiGetCompletedInterviews, apiGetAllFeedbackForUser } from "@/lib/api";
 import UserDashboardClient from "./UserDashboardClient";
 
+export const dynamic = "force-dynamic";
+
 export default async function DashboardPage() {
   const { user } = await apiGetCurrentUser();
   if (!user?.id) redirect("/sign-in");
