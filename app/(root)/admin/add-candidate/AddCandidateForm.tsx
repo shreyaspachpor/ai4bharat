@@ -535,13 +535,9 @@ export default function AddCandidateForm() {
     </div>
   );
 }
-"use client";
 
-import { useState } from "react";
-import { UploadCloud, FileText, X, Lock, CheckCircle, Copy, ArrowRight } from "lucide-react";
-import { toast } from "sonner";
-import { apiVerifyAadhaarPdf, apiGenerateDeepLink } from "@/lib/api";
-import Link from "next/link";
+
+
 
 const districts = ["Bengaluru Urban", "Mysuru", "Hubli-Dharwad", "Mangaluru"];
 const trades = ["Electrician", "Plumber", "Welder", "Mason", "Helper", "Carpenter"];
