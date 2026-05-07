@@ -1,0 +1,41 @@
+# Dependencies
+node_modules
+
+# Build output
+.next
+out
+dist
+build
+
+# Development
+.env
+.env.local
+.env.*.local
+.DS_Store
+
+# Git
+.git
+.gitignore
+
+# IDE
+.vscode
+.idea
+*.swp
+*.swo
+*~
+
+# Testing
+__tests__
+.test
+.spec
+coverage
+
+# Documentation
+*.md
+docs
+
+# Scripts
+scripts
+
+# Public assets that are already in .next
+public/tmp

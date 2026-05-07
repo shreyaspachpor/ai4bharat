@@ -1,0 +1,378 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ─── CSS custom properties ───────────────────────────────────────────────── */
+:root {
+  --radius: 0.625rem;
+  --background: oklch(1 0 0);
+  --foreground: oklch(0.145 0 0);
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.145 0 0);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.145 0 0);
+  --primary: oklch(0.205 0 0);
+  --primary-foreground: oklch(0.985 0 0);
+  --secondary: oklch(0.97 0 0);
+  --secondary-foreground: oklch(0.205 0 0);
+  --muted: oklch(0.97 0 0);
+  --muted-foreground: oklch(0.556 0 0);
+  --accent: oklch(0.97 0 0);
+  --accent-foreground: oklch(0.205 0 0);
+  --destructive: oklch(0.577 0.245 27.325);
+  --border: oklch(0.922 0 0);
+  --input: oklch(0.922 0 0);
+  --ring: oklch(0.708 0 0);
+  --chart-1: oklch(0.646 0.222 41.116);
+  --chart-2: oklch(0.6 0.118 184.704);
+  --chart-3: oklch(0.398 0.07 227.392);
+  --chart-4: oklch(0.828 0.189 84.429);
+  --chart-5: oklch(0.769 0.188 70.08);
+  --sidebar: oklch(0.985 0 0);
+  --sidebar-foreground: oklch(0.145 0 0);
+  --sidebar-primary: oklch(0.205 0 0);
+  --sidebar-primary-foreground: oklch(0.985 0 0);
+  --sidebar-accent: oklch(0.97 0 0);
+  --sidebar-accent-foreground: oklch(0.205 0 0);
+  --sidebar-border: oklch(0.922 0 0);
+  --sidebar-ring: oklch(0.708 0 0);
+}
+
+.dark {
+  --background: oklch(0.145 0 0);
+  --foreground: oklch(0.985 0 0);
+  --card: oklch(0.205 0 0);
+  --card-foreground: oklch(0.985 0 0);
+  --popover: oklch(0.205 0 0);
+  --popover-foreground: oklch(0.985 0 0);
+  --primary: oklch(0.922 0 0);
+  --primary-foreground: oklch(0.205 0 0);
+  --secondary: oklch(0.269 0 0);
+  --secondary-foreground: oklch(0.985 0 0);
+  --muted: oklch(0.269 0 0);
+  --muted-foreground: oklch(0.556 0 0);
+  --accent: oklch(0.269 0 0);
+  --accent-foreground: oklch(0.985 0 0);
+  --destructive: oklch(0.704 0.191 22.216);
+  --border: oklch(1 0 0 / 10%);
+  --input: oklch(1 0 0 / 15%);
+  --ring: oklch(0.556 0 0);
+  --chart-1: oklch(0.488 0.243 264.376);
+  --chart-2: oklch(0.696 0.17 162.48);
+  --chart-3: oklch(0.769 0.188 70.08);
+  --chart-4: oklch(0.627 0.265 303.9);
+  --chart-5: oklch(0.645 0.246 16.439);
+  --sidebar: oklch(0.205 0 0);
+  --sidebar-foreground: oklch(0.985 0 0);
+  --sidebar-primary: oklch(0.488 0.243 264.376);
+  --sidebar-primary-foreground: oklch(0.985 0 0);
+  --sidebar-accent: oklch(0.269 0 0);
+  --sidebar-accent-foreground: oklch(0.985 0 0);
+  --sidebar-border: oklch(1 0 0 / 10%);
+  --sidebar-ring: oklch(0.556 0 0);
+}
+
+/* ─── Base styles — plain CSS only, no @apply ────────────────────────────── */
+@layer base {
+  * {
+    border-color: var(--border);
+  }
+
+  body {
+    background: #181f2a;
+    color: var(--foreground);
+    min-height: 100vh;
+    -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
+  }
+
+  html,
+  body {
+    overscroll-behavior: none;
+  }
+
+  p {
+    color: #d6e0ff;
+  }
+
+  h2 {
+    font-size: 1.875rem;
+    line-height: 2.25rem;
+    font-weight: 600;
+  }
+
+  h3 {
+    font-size: 1.5rem;
+    line-height: 2rem;
+    font-weight: 600;
+  }
+
+  ul {
+    list-style-type: disc;
+    list-style-position: inside;
+  }
+
+  li {
+    color: #d6e0ff;
+  }
+}
+
+/* ─── Component styles ────────────────────────────────────────────────────── */
+@layer components {
+  .btn-call {
+    @apply inline-flex items-center justify-center px-7 py-3 font-bold text-base leading-5 text-white transition-colors duration-150 bg-success-100 border border-transparent rounded-full shadow-sm focus:outline-none active:bg-success-200 hover:bg-success-200 min-w-28 cursor-pointer overflow-visible min-h-12;
+  }
+
+  .btn-disconnect {
+    @apply inline-flex items-center justify-center px-7 py-3 text-base font-bold leading-5 text-white transition-colors duration-150 bg-destructive-100 border border-transparent rounded-full shadow-sm focus:outline-none active:bg-destructive-200 hover:bg-destructive-200 min-w-28 min-h-12;
+  }
+
+  .btn-primary {
+    @apply inline-flex items-center justify-center w-fit bg-primary-200 text-dark-100 hover:bg-primary-200/80 rounded-full font-bold px-5 cursor-pointer min-h-10;
+  }
+
+  .btn-secondary {
+    @apply inline-flex items-center justify-center w-fit bg-dark-200 text-primary-200 hover:bg-dark-200/80 rounded-full font-bold px-5 cursor-pointer min-h-10;
+  }
+
+  .btn-upload {
+    @apply flex items-center justify-center gap-1.5 bg-dark-200 rounded-full min-h-12 px-5 cursor-pointer border border-input overflow-hidden w-full;
+  }
+
+  .card-border {
+    @apply p-0.5 rounded-2xl w-fit;
+    background: linear-gradient(to bottom, #4b4d4f, #4b4d4f33);
+  }
+
+  .card {
+    @apply rounded-2xl min-h-full;
+    background: linear-gradient(to bottom, #1a1c20, #08090d);
+  }
+
+  .form {
+    @apply w-full;
+  }
+
+  .form .label {
+    @apply text-light-100 font-normal;
+  }
+
+  .form .input {
+    @apply bg-dark-200 rounded-full min-h-12 px-5;
+  }
+
+  .form .input::placeholder {
+    color: #d6e0ff;
+  }
+
+  .form .btn {
+    @apply w-full bg-primary-200 text-dark-100 hover:bg-primary-200/80 rounded-full min-h-10 font-bold px-5 cursor-pointer;
+  }
+
+  .call-view {
+    @apply flex sm:flex-row flex-col gap-6 items-center justify-between w-full;
+  }
+
+  .call-view h3 {
+    @apply text-center text-primary-100 mt-5;
+  }
+
+  .call-view .card-interviewer {
+    @apply flex flex-col items-center justify-center gap-2 p-6 h-[360px] rounded-2xl border-2 border-primary-200/50 flex-1 sm:basis-1/2 w-full max-sm:h-[260px];
+    background: linear-gradient(to bottom, #171532, #08090d);
+  }
+
+  .call-view .avatar {
+    @apply z-10 flex items-center justify-center rounded-full relative;
+    background: linear-gradient(to left, #ffffff, #cac5fe);
+    width: 120px;
+    height: 120px;
+  }
+
+  .call-view .avatar .animate-speak {
+    @apply absolute inline-flex animate-ping rounded-full bg-primary-200 opacity-75;
+    width: 83.333%;
+    height: 83.333%;
+  }
+
+  .call-view .card-border {
+    @apply p-0.5 rounded-2xl flex-1 sm:basis-1/2 w-full h-[360px] max-sm:h-[320px];
+    background: linear-gradient(to bottom, #4b4d4f, #4b4d4f33);
+  }
+
+  .call-view .card-content {
+    @apply flex flex-col gap-2 justify-center items-center p-6 rounded-2xl h-full;
+    background: linear-gradient(to bottom, #1a1c20, #08090d);
+  }
+
+  .transcript-border {
+    @apply p-0.5 rounded-2xl w-full;
+    background: linear-gradient(to bottom, #4b4d4f, #4b4d4f33);
+  }
+
+  .transcript-border .transcript {
+    @apply rounded-2xl min-h-14 px-4 py-3 flex items-center justify-center;
+    background: linear-gradient(to bottom, #1a1c20, #08090d);
+  }
+
+  .transcript-border .transcript p {
+    @apply text-base text-center text-white;
+  }
+
+  .section-feedback {
+    @apply flex flex-col gap-8 max-w-5xl mx-auto max-sm:px-4 text-lg leading-7;
+  }
+
+  .section-feedback .buttons {
+    @apply flex w-full justify-evenly gap-4 max-sm:flex-col max-sm:items-center;
+  }
+
+  .auth-layout {
+    @apply flex items-center justify-center mx-auto max-w-7xl min-h-screen max-sm:px-4 max-sm:py-8;
+  }
+
+  .root-layout {
+    @apply flex mx-auto max-w-7xl flex-col gap-8 my-10 px-10 max-sm:px-4 max-sm:my-4;
+  }
+
+  .card-cta {
+    @apply flex flex-row rounded-3xl px-12 py-8 items-center justify-between max-sm:px-4 max-sm:py-6;
+    background: linear-gradient(to bottom, #171532, #08090d);
+  }
+
+  .interviews-section {
+    @apply flex flex-wrap gap-4 max-lg:flex-col w-full items-stretch;
+  }
+
+  .interview-text {
+    @apply text-lg text-center text-white;
+  }
+
+  .progress {
+    @apply h-1.5 text-[5px] font-bold bg-primary-200 rounded-full flex items-center justify-center;
+  }
+
+  .tech-tooltip {
+    @apply absolute bottom-full mb-1 hidden group-hover:flex px-2 py-1 text-xs text-white bg-gray-700 rounded-md shadow-md;
+  }
+
+  .card-interview {
+    @apply rounded-2xl min-h-full flex flex-col p-6 relative overflow-hidden gap-10 justify-between;
+    background: linear-gradient(to bottom, #1a1c20, #08090d);
+  }
+
+  .card-interview .badge-text {
+    @apply text-sm font-semibold capitalize;
+  }
+}
+
+/* ─── Custom utility classes ──────────────────────────────────────────────── */
+.dark-gradient {
+  background: linear-gradient(to bottom, #1a1c20, #08090d);
+}
+
+.border-gradient {
+  background: linear-gradient(to bottom, #4b4d4f, #4b4d4f33);
+}
+
+.pattern {
+  background-image: url("/pattern.png");
+  background-position: top;
+  background-repeat: no-repeat;
+}
+
+.blue-gradient-dark {
+  background: linear-gradient(to bottom, #171532, #08090d);
+}
+
+.blue-gradient {
+  background: linear-gradient(to left, #ffffff, #cac5fe);
+}
+
+.flex-center {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.animate-fadeIn {
+  animation: fadeIn 0.3s ease-in-out;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(5px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* ─── Mobile overrides ────────────────────────────────────────────────────── */
+@media (max-width: 640px) {
+  .root-layout {
+    padding-bottom: calc(env(safe-area-inset-bottom) + 16px);
+  }
+
+  .card-cta {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 14px;
+  }
+
+  h2 {
+    font-size: 1.6rem;
+    line-height: 1.2;
+  }
+
+  h3 {
+    font-size: 1.25rem;
+  }
+}
+
+/* ─── PDF export overrides ────────────────────────────────────────────────── */
+.pdf-export {
+  background: #fff !important;
+  color: #000 !important;
+}
+
+.pdf-export * {
+  color: #000 !important;
+  background-color: transparent !important;
+  border-color: #ccc !important;
+}
+
+.pdf-export h1,
+.pdf-export h2,
+.pdf-export h3,
+.pdf-export h4,
+.pdf-export h5,
+.pdf-export h6 {
+  color: #000 !important;
+}
+
+.pdf-export p,
+.pdf-export span,
+.pdf-export div {
+  color: #000 !important;
+}
+
+.pdf-export .text-primary,
+.pdf-export .text-secondary,
+.pdf-export .text-muted {
+  color: #000 !important;
+}
+
+.pdf-export .bg-gradient-to-b,
+.pdf-export .bg-gradient-to-l,
+.pdf-export .dark-gradient,
+.pdf-export .blue-gradient,
+.pdf-export .blue-gradient-dark {
+  background: #fff !important;
+}
+
+.pdf-export [class*="text-"] {
+  color: #000 !important;
+}
